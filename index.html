@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="mn" data-theme="light" style="color-scheme: light;"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тэмцээний шууд явц</title>
+<style>
+:root{--bg:#fbf6ea;--card:#fff;--text:#1d1a17;--muted:#6f7777;--line:#ece4d4;--acc:#0e8fb0;--g:#fff3d1;--ok:#17803d;--bad:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1714;--card:#262320;--text:#f3eee6;--muted:#a9b3b3;--line:#3a3530;--g:#4a3c17;--ok:#4ade80;--bad:#f87171}}
+:root[data-theme="dark"]{--bg:#1a1714;--card:#262320;--text:#f3eee6;--muted:#a9b3b3;--line:#3a3530;--g:#4a3c17;--ok:#4ade80;--bad:#f87171}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 14px 60px}
+h1{margin:0 0 4px;font-size:28px}.sub{color:var(--muted);margin:0 0 18px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--text);padding:9px 16px;border-radius:999px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:14px}
+.tab.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:17px}
+.sc{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 8px;text-align:center;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:12px;font-weight:700}
+td:nth-child(2),th:nth-child(2){text-align:left;font-weight:700}
+tr.r1 td{background:var(--g)}
+.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.team{border:1px solid var(--line);border-radius:12px;padding:12px}
+.team b{display:block;margin-bottom:4px}.team small{color:var(--muted);line-height:1.5}
+.m{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.m:last-child{border:0}
+.m .t{flex:1}.m .t.r{text-align:right}.m .w{font-weight:800}
+.m .s{font-weight:800;padding:4px 10px;border-radius:8px;background:var(--bg)}
+.empty{color:var(--muted);padding:6px 0}
+.adm{border:2px dashed var(--acc)}
+.adm h3{margin:14px 0 8px;font-size:14px}
+.f{display:flex;flex-wrap:wrap;gap:8px}
+input,select,button{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+input.n{width:70px}
+button.p{background:var(--acc);color:#fff;border:0;font-weight:700;cursor:pointer}
+button.x{background:none;border:0;color:var(--bad);cursor:pointer;padding:4px 8px}
+.note{color:var(--muted);font-size:12px;margin-top:8px}
+.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-right:6px;animation:b 1.2s infinite}
+@keyframes b{50%{opacity:.25}}
+</style>
+</head>
+<body>
+<main>
+<h1><span class="live"></span>Тэмцээний шууд явц</h1>
+<p class="sub">Баг, тамирчид, хожил хожигдол, оноо шууд шинэчлэгдэнэ.</p>
+<div class="tabs" id="tabs"></div>
+<div id="view"></div>
+<p class="note" id="status"></p>
+</main>
+<script>
+const SHEET_ID="1RpaVbK2wZM7sIkU6uNydeHWF_Lv43wJnNQgF1mmlwK8";
+const CATS=["3x3 Эрэгтэй","5x5 Эмэгтэй","Дартс","Ширээний теннис","Гар бөмбөг"];
+const ICON={"3x3 Эрэгтэй":"🏀","5x5 Эмэгтэй":"🏀","Дартс":"🎯","Ширээний теннис":"🏓","Гар бөмбөг":"🤾"};
+let cur=CATS[0],D={teams:[],matches:[],meals:[]};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function csv(t){const r=[];let row=[],f="",q=false;for(let i=0;i<t.length;i++){const c=t[i];
+ if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}
+ else if(c=='"')q=true;else if(c==","){row.push(f);f=""}
+ else if(c=="\n"){row.push(f);r.push(row);row=[];f=""}else if(c!="\r")f+=c}
+ if(f||row.length){row.push(f);r.push(row)}return r.slice(1).filter(x=>x.some(v=>v.trim()))}
+async function sheet(n){const u="https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet="+encodeURIComponent(n)+"&_="+Date.now();
+ const r=await fetch(u);if(!r.ok)throw 0;return csv(await r.text())}
+async function load(){
+ if(SHEET_ID.startsWith("ЭНД")){$("status").textContent="Google Sheet холбоогүй байна.";return}
+ try{const [a,b,c]=await Promise.all([sheet("Багууд"),sheet("Тоглолт"),sheet("Зоог")]);
+  D={teams:a,matches:b,meals:c};$("status").textContent="";render()}
+ catch(e){$("status").textContent="Өгөгдөл уншиж чадсангүй. Sheet-ийг Share → Anyone with the link (Viewer) болгосон эсэхээ шалгана уу."}}
+function table(ms){const m={};
+ const g=n=>m[n]||(m[n]={n,p:0,w:0,l:0,f:0,a:0});
+ D.teams.filter(t=>t[0]===cur).forEach(t=>g(t[1]));
+ ms.forEach(x=>{const A=g(x[2]),B=g(x[3]),sa=+x[4],sb=+x[5];A.p++;B.p++;A.f+=sa;A.a+=sb;B.f+=sb;B.a+=sa;
+  if(sa>sb){A.w++;B.l++}else if(sb>sa){B.w++;A.l++}});
+ return Object.values(m).map(x=>({...x,d:x.f-x.a,pts:x.w*2+x.l})).sort((a,b)=>b.pts-a.pts||b.d-a.d||b.f-a.f)}
+function render(){
+ $("tabs").innerHTML=CATS.map(n=>`<button class="tab ${n===cur?"on":""}" data-k="${n}">${ICON[n]} ${n}</button>`).join("");
+ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{cur=b.dataset.k;render()});
+ const all=D.matches.filter(x=>x[0]===cur),done=all.filter(x=>x[4]!==""&&x[5]!==""&&x[4]!=null),up=all.filter(x=>!(x[4]!==""&&x[5]!==""));
+ const rows=table(done),teams=D.teams.filter(t=>t[0]===cur);
+ let h=`<div class="card"><h2>Байрын жагсаалт</h2><div class="sc">`+(rows.length?`<table><tr><th>#</th><th>Баг / тамирчин</th><th>Тогл</th><th>Хож</th><th>Хож.</th><th>+/-</th><th>Оноо</th></tr>${rows.map((x,i)=>`<tr class="${i===0&&x.p?"r1":""}"><td>${i+1}</td><td>${esc(x.n)}</td><td>${x.p}</td><td>${x.w}</td><td>${x.l}</td><td>${x.d>0?"+":""}${x.d}</td><td><b>${x.pts}</b></td></tr>`).join("")}</table>`:`<div class="empty">Баг бүртгэгдээгүй байна.</div>`)+`</div><div class="note">Хожил 2 оноо, хожигдол 1 оноо. Тэнцвэл онооны зөрүүгээр эрэмбэлнэ.</div></div>`;
+ h+=`<div class="card"><h2>Удахгүй болох тоглолтууд</h2>`+(up.length?up.map(x=>`<div class="m"><span class="t r">${esc(x[2])}</span><span class="s">${esc(x[1]||"vs")}</span><span class="t">${esc(x[3])}</span></div>`).join(""):`<div class="empty">Товлосон тоглолт алга.</div>`)+`</div>`;
+ h+=`<div class="card"><h2>Тоглолтын үр дүн</h2>`+(done.length?[...done].reverse().map(x=>`<div class="m"><span class="t r ${+x[4]>+x[5]?"w":""}">${esc(x[2])}</span><span class="s">${esc(x[4])} : ${esc(x[5])}</span><span class="t ${+x[5]>+x[4]?"w":""}">${esc(x[3])}</span></div>`).join(""):`<div class="empty">Тоглолт хараахан болоогүй.</div>`)+`</div>`;
+ h+=`<div class="card"><h2>Оролцогчид</h2><div class="teams">`+(teams.length?teams.map(t=>`<div class="team"><b>${esc(t[1])}</b><small>${esc(t[2]||"Гишүүн нэмээгүй")}</small></div>`).join(""):`<div class="empty">Баг байхгүй.</div>`)+`</div></div>`;
+ if(cur==="Гар бөмбөг"){h+=`<div class="card"><h2>🍽️ Зоогийн хуваарилалт</h2>`+(D.meals.length?D.meals.map(x=>`<div class="m"><span class="t"><b>${esc(x[0])}</b></span><span class="t">${esc(x[1])}</span></div>`).join(""):`<div class="empty">Зоог хуваарилаагүй байна.</div>`)+`</div>`}
+ $("view").innerHTML=h}
+render();load();setInterval(load,20000);
+</script>
+</body>
+</html>
